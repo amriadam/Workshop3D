@@ -1,0 +1,67 @@
+# Compiled Object Code and Libraries (.obj, .pdb, .dll, .exe)
+*.obj
+*.pdb
+*.dll
+*.exe
+*.resources
+*.cache
+_ReSharper.*
+*.suo # Solution User Options (VS)
+*.userprefs # User Preferences (VS)
+*.vspscc
+*.vssscc
+*.csproj.user
+*.sln.docstates
+*.testsettings
+*.runsettings
+*. AssemblyInfo.cs # Depending on your setup, you might want to ignore generated AssemblyInfo
+
+# Build Output Directories
+bin/
+obj/
+packages/ # NuGet packages
+
+# Visual Studio Specific Files
+.vs/
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+*.VC.VC.opendb
+*.vcxproj.user
+*.vcxproj.filters.user
+*.vcxproj.local
+*.vsidx
+* /Workshop3D
+
+# Code Analysis and Reporting
+StyleCop.Cache
+FxCopCache.xml
+
+# Setup and Deployment
+publish/
+*.msi
+*.application
+*.appref-ms
+Setup/
+
+# User-Specific Files and Folders
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+*.FileListAbsolute.txt
+_UpgradeReport_Files/
+_UpgradeReport_Backup/
+
+# Tooling Folders (like Resharper)
+.idea/
+
+# Other Temporary Files
+*.~vs~
+*.bak
+*.tmp
+*.log
+
+# Optional: Ignore user settings files if you don't want to track them
+# *.config
+# user.config
