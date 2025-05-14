@@ -86,22 +86,8 @@ public partial class Form1 : Form
         GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
 
         // Convert Vector3 list to a float array for BufferData
-
-        float[] vertices = new float[_data.Length * 3];
-
-        for (int i = 0; i < _data.Length; i++)
-
-        {
-
-            vertices[i * 3] = _data[i].X;
-
-            vertices[i * 3 + 1] = _data[i].Y;
-
-            vertices[i * 3 + 2] = _data[i].Z;
-
-        }
-
-        GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+        
+        GL.BufferData(BufferTarget.ArrayBuffer, 3 * _data.Length * sizeof(float), _data, BufferUsageHint.StaticDraw);
 
         // Create and compile shaders (modified to accept MVP matrix)
 
