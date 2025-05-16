@@ -1,6 +1,8 @@
 using OpenTK.Graphics.OpenGL;
+using Workshop3D.Common;
+using Workshop3D.Shaders;
 
-namespace WinFormsApp1;
+namespace Workshop3D;
 
 public sealed class GLProgram 
     : DisposableObject

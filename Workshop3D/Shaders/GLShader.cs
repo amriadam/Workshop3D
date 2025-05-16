@@ -1,6 +1,7 @@
 using OpenTK.Graphics.OpenGL;
+using Workshop3D.Common;
 
-namespace WinFormsApp1;
+namespace Workshop3D.Shaders;
 
 public abstract class GLShader
     : DisposableObject

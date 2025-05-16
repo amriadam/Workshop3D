@@ -1,6 +1,6 @@
 using OpenTK.Graphics.OpenGL;
 
-namespace WinFormsApp1;
+namespace Workshop3D.Shaders;
 
 public sealed class GLFragmentShader(string source)
     : GLShader(ShaderType.FragmentShader, source)

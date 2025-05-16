@@ -1,4 +1,4 @@
-namespace WinFormsApp1;
+namespace Workshop3D.Common;
 
 public abstract class DisposableObject
     : IDisposable
