@@ -1,6 +1,6 @@
 using OpenTK.Graphics.OpenGL;
 
-namespace WinFormsApp1;
+namespace Workshop3D.Common;
 
 public static class GLUtils
 {

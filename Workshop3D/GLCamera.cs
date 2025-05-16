@@ -1,6 +1,6 @@
 using OpenTK.Mathematics;
 
-namespace WinFormsApp1;
+namespace Workshop3D;
 
 /// <summary>
 /// Represents a camera in a 3D graphics scene, responsible for generating the view matrix.
