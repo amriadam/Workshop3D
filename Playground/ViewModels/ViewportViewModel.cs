@@ -11,7 +11,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Threading;
 
-namespace Playground;
+namespace Playground.ViewModels;
 
 public sealed partial class ViewportViewModel
     : ObservableObject

@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Workshop3D", "Workshop3D\Workshop3D.csproj", "{4CCF92B0-F3A2-4A1C-8225-1836F2752EB3}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground", "Playground\Playground.csproj", "{442CCE38-30E8-4CCA-B4E4-D8549690F3DD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground.Essentials", "Playground.Essentials\Playground.Essentials.csproj", "{F77E4030-E6B4-4FF3-B53B-6F028D3144BD}"
@@ -25,10 +23,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4CCF92B0-F3A2-4A1C-8225-1836F2752EB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4CCF92B0-F3A2-4A1C-8225-1836F2752EB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4CCF92B0-F3A2-4A1C-8225-1836F2752EB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4CCF92B0-F3A2-4A1C-8225-1836F2752EB3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{442CCE38-30E8-4CCA-B4E4-D8549690F3DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{442CCE38-30E8-4CCA-B4E4-D8549690F3DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{442CCE38-30E8-4CCA-B4E4-D8549690F3DD}.Release|Any CPU.ActiveCfg = Release|Any CPU

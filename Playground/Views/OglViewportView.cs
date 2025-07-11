@@ -10,28 +10,28 @@ using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Forms.Integration;
 
-namespace Playground;
+namespace Playground.Views;
 
-public class OglViewport
+public class OglViewportView
     : WindowsFormsHost
 {
     public static readonly DependencyProperty CameraProperty 
         = DependencyProperty.Register(
             nameof(Camera),
             typeof(IProjectionCamera),
-            typeof(OglViewport),
+            typeof(OglViewportView),
             new PropertyMetadata(default(IProjectionCamera), OnCameraChanged));
 
     public static readonly DependencyProperty ModelsProperty
         = DependencyProperty.Register(
             nameof(Models),
             typeof(ObservableCollection<IGeometryModel>),
-            typeof(OglViewport),
+            typeof(OglViewportView),
             new PropertyMetadata(default(ObservableCollection<IGeometryModel>), OnModelsChanged));
 
     private OglRenderContext? mRenderContext;
 
-    public OglViewport()
+    public OglViewportView()
     {
         Models = [];
 
@@ -153,7 +153,7 @@ public class OglViewport
 
     private static void OnCameraChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
     {
-        if (sender is not OglViewport instance)
+        if (sender is not OglViewportView instance)
         {
             return;
         }
@@ -203,7 +203,7 @@ public class OglViewport
 
     private static void OnModelsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
     {
-        if (sender is not OglViewport instance)
+        if (sender is not OglViewportView instance)
         {
             return;
         }

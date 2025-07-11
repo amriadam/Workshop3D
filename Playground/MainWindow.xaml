@@ -24,7 +24,7 @@
                 Content="Zoom Out"
                 Command="{Binding ZoomOutCommand, Mode=OneWay}" />
         </StackPanel>
-        <local:OglViewport 
+        <local:OglViewportView 
             Grid.Row="1"
             Camera="{Binding Camera, Mode=OneWay}"
             Models="{Binding Models, Mode=OneWay}"/>
