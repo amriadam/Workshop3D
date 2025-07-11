@@ -4,8 +4,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+	<UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Playground.Ogl\Playground.Ogl.csproj" />
+    <ProjectReference Include="..\Playground.Stl\Playground.Stl.csproj" />
+    <ProjectReference Include="..\Playground.Windows\Playground.Windows.csproj" />
     <ProjectReference Include="..\Playground.Xv3\Playground.Xv3.csproj" />
   </ItemGroup>
 

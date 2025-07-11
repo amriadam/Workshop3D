@@ -1,0 +1,32 @@
+﻿<Window
+    x:Class="Playground.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:local="clr-namespace:Playground"
+    mc:Ignorable="d"
+    Title="MainWindow"
+    Width="1280"
+    Height="1024">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <StackPanel
+            Grid.Row="0"
+            Orientation="Horizontal">
+            <Button 
+                Content="Import File"
+                Command="{Binding ImportFileCommand, Mode=OneWay}"/>
+            <Button
+                Content="Zoom Out"
+                Command="{Binding ZoomOutCommand, Mode=OneWay}" />
+        </StackPanel>
+        <local:OglViewport 
+            Grid.Row="1"
+            Camera="{Binding Camera, Mode=OneWay}"
+            Models="{Binding Models, Mode=OneWay}"/>
+    </Grid>
+</Window>

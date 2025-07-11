@@ -1,4 +1,4 @@
-namespace WinFormsApp1;
+namespace Playground.Essentials;
 
 public abstract class DisposableObject
     : IDisposable

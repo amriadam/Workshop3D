@@ -1,277 +1,424 @@
 using OpenTK.GLControl;
-
-using OpenTK.Graphics.OpenGL;
-
+using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
+using OpenTK.Windowing.Common;
+using Playground.Contract;
+using Playground.Ogl;
+using Playground.Ogl.Internal;
+using Playground.Stl;
+using Playground.Xv3;
+using System.Diagnostics;
+using System.Drawing;
 
 namespace WinFormsApp1;
 
 public partial class Form1 : Form
 {
-    private readonly GLControl _surface;
-    private readonly Vector3[] _data;
+    private const float MovementSpeed = 0.5f;  // [distance]
+    private const float RotationSpeed = 1.0f;  // [angle in deg]
 
-    private int _vertexBufferObject;
-    private int _vertexArrayObject;
+    private readonly Label         mInfo;
+    private readonly GLControl     mSurface;
 
-    private GLProgram? _shaderProgram;
-
-    private Matrix4 _projectionMatrix;
-    private Matrix4 _modelMatrix;
-
-    private GLCamera _camera = new GLCamera
-    {
-        Position = new Vector3(5, 5, 5),
-    };
-
-
-    private bool _isPanning;
-    private Point _startMousePosition;
+    private OglRenderingProgram?      mRendering;
+    private OglPickingProgram?        mPicking;
     
-    private readonly double[] _zoomList = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
-    private int _zoomIndex = 3;
-    private Matrix4 _translation = Matrix4.Identity;
-    private Matrix4 _scale = Matrix4.Identity;
+    private OglPerspectiveCamera?     mCamera;
+    
+    private readonly List<OglGeometryModel> mModelList = [];
 
     public Form1()
     {
         InitializeComponent();
 
-        _surface = new GLControl();
+        var settings = new GLControlSettings 
+        { 
+            API        = ContextAPI.OpenGL, 
+            APIVersion = new Version(4, 6), 
+            Flags      = ContextFlags.ForwardCompatible,
+            Profile    = ContextProfile.Compatability 
+        };
 
-        _surface.Dock = DockStyle.Fill;
+        mSurface = new GLControl(settings)
+        {
+            Dock      = DockStyle.Fill,
+            BackColor = Color.LightSkyBlue,
+        };
 
-        _surface.Paint += OnSurfacePaint;
+        mInfo = new Label
+        {
+            Width     = 200,
+            Height    = 30,
+            Font      = new Font("Arial", 12),
+            BackColor = Color.Black,
+            ForeColor = Color.Red,
+            Visible   = true,
+        };
 
-        _surface.Resize += OnSurfaceResize; // Handle resizing for projection matrix
+        mSurface.Load += OnSurfaceLoad;
 
-        _surface.Load += OnSurfaceLoad;
+        Controls.Add(mSurface);
+        Controls.Add(mInfo);
 
-        _surface.MouseDown  += OnSurfaceMouseDown;
-        _surface.MouseMove  += OnSurfaceMouseMove;
-        _surface.MouseUp    += OnSurfaceMouseUp;
-        _surface.MouseWheel += OnSurfaceMouseWheel;
-
-        Controls.Add(_surface);
-
-        // Example vertex data (moved slightly off origin for better visibility)
-
-        _data = GenerateData();
-
+        mInfo.BringToFront();
     }
 
     private void OnSurfaceLoad(object? sender, EventArgs e)
-
     {
-
-        GL.ClearColor(Color.CornflowerBlue);
-
-        GL.Enable(EnableCap.DepthTest); // Enable depth testing for proper 3D rendering
-
-        GL.Enable(EnableCap.ProgramPointSize);
-
-        //GL.Enable(EnableCap.PointSmooth);
-
-
-        // Generate and bind Vertex Array Object (VAO)
-
-        _vertexArrayObject = GL.GenVertexArray();
-
-        GL.BindVertexArray(_vertexArrayObject);
-
-        // Create and populate Vertex Buffer Object (VBO)
-
-        _vertexBufferObject = GL.GenBuffer();
-
-        GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-
-        // Convert Vector3 list to a float array for BufferData
-        
-        GL.BufferData(BufferTarget.ArrayBuffer, 3 * _data.Length * sizeof(float), _data, BufferUsageHint.StaticDraw);
-
-        // Create and compile shaders (modified to accept MVP matrix)
-
-        string vertexShaderSource = @"
-
-            #version 330 core
-
-            layout (location = 0) in vec3 aPosition;
-
-            uniform mat4 modelViewProjection;
- 
-            void main()
-            {
-                gl_Position = modelViewProjection * vec4(aPosition, 1.0);
-
-                gl_PointSize = 3.0;
-            }";
-
-        string fragmentShaderSource = @"
-
-            #version 330 core
-
-            out vec4 FragColor;
- 
-            void main()
-            {
-                FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-            }";
-
-        _shaderProgram = new GLProgram(vertexShaderSource, fragmentShaderSource);
-        var positionAttributeLocation = _shaderProgram.GetAttributeLocation("aPosition");
-
-        // Set up vertex attributes
-        GL.EnableVertexAttribArray(positionAttributeLocation);
-        GL.VertexAttribPointer(positionAttributeLocation, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
-
-        // Unbind VAO and VBO
-        GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
-        GL.BindVertexArray(0);
-
-        // Initial projection matrix setup (will be updated on resize)
-
-        OnSurfaceResize(this, EventArgs.Empty);
-
-        _shaderProgram.Use();
-
-        // Create the model matrix (identity for now, as the points are defined in world space)
-        _modelMatrix = Matrix4.Identity;
-
-        // Calculate the model-view-projection matrix
-        Matrix4 modelViewProjection = _modelMatrix * _camera.ViewMatrix * _projectionMatrix;
-
-        // Get the location of the uniform variable in the shader
-
-        int mvpLocation = _shaderProgram.GetUniformLocation("modelViewProjection");
-
-        // Pass the MVP matrix to the shader
-
-        GL.UniformMatrix4(mvpLocation, false, ref modelViewProjection);
-
-        _surface.Invalidate();
-    }
-
-    private void OnSurfaceResize(object? sender, EventArgs e)
-    {
-        GL.Viewport(0, 0, _surface.Width, _surface.Height);
-
-        if (_surface.Width == 0 || _surface.Height == 0)
+        if (sender is not GLControl surface)
         {
             return;
         }
 
-        float aspectRatio = ((float)_surface.Width) / _surface.Height;
+        foreach (var name in Enum.GetValues<StringName>())
+        {
+            string value = GL.GetString(name);
 
-        _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(
-            MathHelper.DegreesToRadians(45.0f), // Field of view in radians
-            aspectRatio,
-            0.1f,   // Near clipping plane
-            100.0f  // Far clipping plane
-        );
+            Debug.WriteLine($"'{name}':'{value}'");
+        }
+
+        surface.Load -= OnSurfaceLoad;
+
+        surface.Resize     += OnSurfaceResize;
+        surface.Paint      += OnSurfacePaint;
+        surface.MouseWheel += OnSurfaceMouseWheel;
+        surface.MouseMove  += OnSurfaceMouseMove;
+        surface.KeyPress   += OnSurfaceKeyPress;
+
+        GL.ClearColor(surface.BackColor);
+
+        GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+        GL.DepthFunc(DepthFunction.Less);
+        GL.CullFace(TriangleFace.Back);
+
+        mRendering = new OglRenderingProgram();
+        mPicking   = new OglPickingProgram(surface.Width, surface.Height);
+
+        mCamera = new OglPerspectiveCamera
+        {
+            AspectRatio = surface.AspectRatio,
+        };
+
+        mRendering.ViewMatrix       
+            = mCamera.ViewMatrix;
+
+        mRendering.ProjectionMatrix 
+            = mCamera.ProjectionMatrix;
+
+        mPicking.ViewMatrix 
+            = mCamera.ViewMatrix;
+
+        mPicking.ProjectionMatrix
+            = mCamera.ProjectionMatrix;
+
+        mCamera.ViewMatrixChanged       += OnCameraMatrixChanged;
+        mCamera.ProjectionMatrixChanged += OnCameraMatrixChanged;
+
+        mModelList.Add(LoadXv3GeometryModel("complettetire.xv3"));
+        //mModelList.Add(new PointGeometryModel(new PointGeometry([new Vector3(0, 0, 0)], [Color4.Red]), 10));
+        //mModelList.Add(LoadStlGeometryModel("sponge.STL", new Color4(0x7F, 0x7F, 0x7F, 0xFF)));
+    }
+
+    private void OnSurfaceResize(object? sender, EventArgs e)
+    {
+        if (sender is not GLControl surface)
+        {
+            return;
+        }
+
+        GL.Viewport(0, 0, surface.Width, surface.Height);
+
+        var camera = mCamera;
+
+        if (camera is not null)
+        {
+            camera.AspectRatio = surface.AspectRatio;
+        }
+
+        mPicking?.Dispose();
+        mPicking = new OglPickingProgram(surface.Width, surface.Height);
+
+        surface.Focus();
+        surface.Invalidate();
     }
 
     private void OnSurfacePaint(object? sender, PaintEventArgs e)
     {
+        if (sender is not GLControl surface)
+        {
+            return;
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+
+        GL.Enable(EnableCap.DepthTest);
+        GL.Enable(EnableCap.Blend);
+        GL.Disable(EnableCap.CullFace);
+        GL.Enable(EnableCap.LineSmooth);
+
+        GL.ClearColor(surface.BackColor);
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-        GL.BindVertexArray(_vertexArrayObject);
+        var program = mRendering;
+
+        if (program is null)
         {
-            // Draw the vertices
-            GL.DrawArrays(PrimitiveType.Points, 0, _data.Length);
+            return;
         }
-        GL.BindVertexArray(0);
 
-        _surface.SwapBuffers();
-    }
+        program.Use();
+        program.LightMode = 0;
 
-
-    private void OnSurfaceMouseDown(object? sender, MouseEventArgs e)
-    {
-        _isPanning = true;
-        _startMousePosition = e.Location;
-    }
-
-    private void OnSurfaceMouseMove(object? sender, MouseEventArgs e)
-    {
-        if (_isPanning)
+        foreach (var model in mModelList)
         {
-            var oldPosition = new Vector3(_startMousePosition.X, _startMousePosition.Y, 0);
-            var newPosition = new Vector3(e.Location.X, e.Location.Y, 0);
-
-
-            var delta = newPosition - oldPosition;
-
-            delta.X /= _surface.Width;
-            delta.Y /= -_surface.Height;
-
-            _translation = Matrix4.CreateTranslation(-delta);
-
-            UpdateModelViewProjectionMatrix();
+            model.Render();
         }
-    }
 
-    private void OnSurfaceMouseUp(object? sender, MouseEventArgs e)
-    {
-        _isPanning = false;
+        surface.SwapBuffers();
+
+        mInfo.Text = $"{stopwatch.Elapsed.TotalMicroseconds:F0} µs";
     }
 
     private void OnSurfaceMouseWheel(object? sender, MouseEventArgs e)
     {
-        _zoomIndex = Math.Clamp(_zoomIndex + Math.Sign(e.Delta), 0, _zoomList.Length - 1);
-
-        double zoom = _zoomList[_zoomIndex];
-
-        _scale = Matrix4.CreateScale((float)zoom);
-
-        UpdateModelViewProjectionMatrix();
-    }
-
-    private void UpdateModelViewProjectionMatrix()
-    {
-        _modelMatrix *= _translation * _scale;
-
-        // Calculate the model-view-projection matrix
-
-        var modelViewProjection = _modelMatrix * _camera.ViewMatrix * _projectionMatrix;
-
-        // Get the location of the uniform variable in the shader
-
-        int mvpLocation = _shaderProgram.GetUniformLocation("modelViewProjection");
-
-        // Pass the MVP matrix to the shader
-
-        GL.UniformMatrix4(mvpLocation, false, ref modelViewProjection);
-
-        _surface.Invalidate();
-    }
-
-    private static Vector3[] GenerateData()
-    {
-        double T = 10;
-
-        double fs = 1_000_000;
-
-        double dt = 1 / fs;
-
-        int N = (int)(T * fs);
-
-        var data = new Vector3[N];
-
-        for (int i = 0; i < N; i++)
+        if (sender is not GLControl surface)
         {
-            double t = i * dt;
-
-            double rad = 2 * Math.PI * t;
-
-            double x = Math.Cos(rad);
-
-            double y = Math.Sin(rad);
-
-            double z = -t;
-
-            data[i] = new Vector3((float)x, (float)y, (float)z);
+            return;
         }
 
-        return data;
+        var camera = mCamera;
+        if (camera is null)
+        {
+            return;
+        }
+
+        surface.Invalidate();
+    }
+
+    private void OnSurfaceMouseMove(object? sender, MouseEventArgs e)
+    {
+        if (sender is not GLControl surface)
+        {
+            return;
+        }
+
+        Point mousePosition = e.Location;
+
+        if (mPicking is not null)
+        {
+            mPicking.Use();
+
+            if (mPicking.TryPickRange(mModelList, mousePosition.X, mousePosition.Y, out var range))
+            {
+                Debug.WriteLine($"({DateTime.UtcNow.Ticks}):{mousePosition} -> {range.Name}");
+            }
+
+            mRendering?.Use();
+        }
+
+        surface.Invalidate();
+    }
+
+    private void OnSurfaceKeyPress(object? sender, KeyPressEventArgs e)
+    {
+        if (sender is not GLControl surface)
+        {
+            return;
+        }
+
+        var program = mRendering;
+        if (program is null)
+        {
+            return;
+        }
+
+        Matrix4 modelMatrix;
+
+        switch (e.KeyChar)
+        {
+            case 'w':
+                modelMatrix = Matrix4.CreateRotationX(MathHelper.DegreesToRadians(RotationSpeed));
+                break;
+            case 's':
+                modelMatrix = Matrix4.CreateRotationX(MathHelper.DegreesToRadians(-RotationSpeed));
+                break;
+            case 'a':
+                modelMatrix = Matrix4.CreateRotationY(MathHelper.DegreesToRadians(RotationSpeed));
+                break;
+            case 'd':
+                modelMatrix = Matrix4.CreateRotationY(MathHelper.DegreesToRadians(-RotationSpeed));
+                break;
+            case 'e':
+                modelMatrix = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(RotationSpeed));
+                break;
+            case 'q':
+                modelMatrix = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(-RotationSpeed));
+                break;
+            default:
+                return;
+        }
+
+        program.ModelMatrix *= modelMatrix;
+
+        surface.Invalidate();
+    }
+
+    private void OnCameraMatrixChanged(object? sender, EventArgs e)
+    {
+        if (sender is not OglProjectionCamera camera)
+        {
+            return;
+        }
+
+        OglDefaultProgram?[] programs = 
+        [
+            mRendering,
+            mPicking,
+        ];
+
+        foreach (var program in programs)
+        {
+            if (program is null)
+            {
+                continue;
+            }
+
+            program.ViewMatrix       = camera.ViewMatrix;
+            program.ProjectionMatrix = camera.ProjectionMatrix;
+        }
+    }
+
+    private static OglLineGeometryModel LoadXv3GeometryModel(string fileName)
+    {
+        const string folderPath = @"C:\\Users\\tino.kreutzberger\\Desktop\\HelixToolkitWorkshop\\HelixToolkitWorkshop\\bin\\Debug\\net8.0-windows\\Exchange";
+
+        var document = Xv3Document.LoadFromXmlFile(Path.Combine(folderPath, fileName));
+
+        List<Xv3Group> groups = [];
+        document.Flat(groups, null, null);
+
+        var builder = new OglLineGeometryBuilder();
+
+        var palette = MakeHsvPalette();
+        Shuffle(palette, new Random());
+
+        int groupName = 0;
+
+        foreach (var grouping in groups.GroupBy(group => group.Name[..3]))
+        {
+            int color = palette[groupName].ToArgb();
+
+            foreach (var group in grouping)
+            {
+                foreach (var entity in group.Children)
+                {
+                    if (entity is Xv3Polyline polyline)
+                    {
+                        var points = polyline.Points;
+
+                        builder.AddPolyline(int.MaxValue, [.. points.Select(p => new Vector3(p.X, p.Y, p.Z))], color, false);
+                    }
+                }
+            }
+
+            groupName = (groupName + 1) % palette.Length;
+        }
+
+        var geometry = builder.BuildGeometry();
+
+        try
+        {
+            var model = new OglLineGeometryModel(geometry, 1);
+
+            geometry = null;
+
+            return model;
+        }
+        finally
+        {
+            geometry?.Dispose();
+        }
+    }
+
+    private static MeshGeometryModel LoadStlGeometryModel(string fileName, int name, Color color)
+    {
+        const string folderPath = @"C:\\Users\\tino.kreutzberger\\Desktop\\HelixToolkitWorkshop\\HelixToolkitWorkshop\\bin\\Debug\\net8.0-windows\\Exchange";
+
+        var solid = StlReader.LoadSolidFromFile(Path.Combine(folderPath, fileName));
+
+        var builder = new OglGeometryBuilder();
+
+        builder.AddSolid(name, solid, color.ToArgb());
+
+        var geometry = builder.BuildGeometry();
+
+        try
+        {
+            var model = new OglMeshGeometryModel(geometry);
+
+            geometry = null;
+
+            return model;
+        }
+        finally
+        {
+            geometry?.Dispose();
+        }
+    }
+
+    private static Color[] MakeHsvPalette()
+    {
+        return 
+        [
+            Color.FromArgb(255, 0, 0),
+            Color.FromArgb(255, 64, 0),
+            Color.FromArgb(255, 128, 0),
+            Color.FromArgb(255, 192, 0),
+            Color.FromArgb(255, 255, 0),
+            Color.FromArgb(192, 255, 0),
+            Color.FromArgb(128, 255, 0),
+            Color.FromArgb(64, 255, 0),
+            Color.FromArgb(0, 255, 0),
+            Color.FromArgb(0, 255, 64),
+            Color.FromArgb(0, 255, 128),
+            Color.FromArgb(0, 255, 192),
+            Color.FromArgb(0, 255, 255),
+            Color.FromArgb(0, 192, 255),
+            Color.FromArgb(0, 128, 255),
+            Color.FromArgb(0, 64, 255),
+            Color.FromArgb(0, 0, 255),
+            Color.FromArgb(64, 0, 255),
+            Color.FromArgb(128, 0, 255),
+            Color.FromArgb(192, 0, 255),
+            Color.FromArgb(255, 0, 255),
+            Color.FromArgb(255, 0, 192),
+            Color.FromArgb(255, 0, 128),
+            Color.FromArgb(255, 0, 64),
+            Color.FromArgb(128, 0, 0),
+            Color.FromArgb(128, 128, 0),
+            Color.FromArgb(0, 128, 0),
+            Color.FromArgb(0, 0, 128),
+            Color.FromArgb(128, 0, 128),
+            Color.FromArgb(255, 255, 255),
+            Color.FromArgb(128, 128, 128),
+            Color.FromArgb(0, 0, 0),
+        ];
+    }
+
+    private static void Shuffle<T>(T[] values, Random random)
+    {
+        int[] bins = new int[values.Length];
+        for (int i = 0; i < bins.Length; ++i)
+        {
+            bins[i] = random.Next();
+        }
+
+        bins = [.. bins.Select((value, index) => (value, index)).OrderBy(a => a.value).Select(a => a.index)];
+
+        T[] shuffle = [.. values];
+        for (int i = 0; i < values.Length; ++i)
+        {
+            values[i] = shuffle[bins[i]];
+        }
     }
 }
